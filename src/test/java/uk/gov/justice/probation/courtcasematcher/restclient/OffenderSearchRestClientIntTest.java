@@ -12,14 +12,12 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.test.StepVerifier;
 import uk.gov.justice.probation.courtcasematcher.application.TestMessagingConfig;
 import uk.gov.justice.probation.courtcasematcher.restclient.model.offendersearch.MatchRequest;
-import uk.gov.justice.probation.courtcasematcher.restclient.model.offendersearch.OffenderAlias;
 import uk.gov.justice.probation.courtcasematcher.restclient.model.offendersearch.OffenderSearchMatchType;
 import uk.gov.justice.probation.courtcasematcher.wiremock.WiremockExtension;
 import uk.gov.justice.probation.courtcasematcher.wiremock.WiremockMockServer;
 
 import java.time.LocalDate;
 import java.time.Month;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -49,7 +47,7 @@ public class OffenderSearchRestClientIntTest {
             assertThat(match).isPresent();
             assertThat(match.get().getMatchedBy()).isEqualTo(OffenderSearchMatchType.ALL_SUPPLIED);
             assertThat(match.get().getMatches().size()).isEqualTo(1);
-            assertThat(match.get().isExactMatch()).isTrue();
+            assertThat(match.get().isExactOffenderMatch()).isTrue();
 
             var offender = match.get().getMatches().get(0).getOffender();
             assertThat(offender.getOtherIds().getCrn()).isEqualTo("X346204");
@@ -70,7 +68,7 @@ public class OffenderSearchRestClientIntTest {
             assertThat(match).isPresent();
             assertThat(match.get().getMatchedBy()).isEqualTo(OffenderSearchMatchType.ALL_SUPPLIED);
             assertThat(match.get().getMatches().size()).isEqualTo(1);
-            assertThat(match.get().isExactMatch()).isTrue();
+            assertThat(match.get().isExactOffenderMatch()).isTrue();
 
             var offender = match.get().getMatches().get(0).getOffender();
             assertThat(offender.getOtherIds().getCrn()).isEqualTo("X346204");
@@ -87,7 +85,7 @@ public class OffenderSearchRestClientIntTest {
             assertThat(match).isPresent();
             assertThat(match.get().getMatchedBy()).isEqualTo(OffenderSearchMatchType.ALL_SUPPLIED);
             assertThat(match.get().getMatches().size()).isEqualTo(1);
-            assertThat(match.get().isExactMatch()).isTrue();
+            assertThat(match.get().isExactOffenderMatch()).isTrue();
 
             var offender = match.get().getMatches().get(0).getOffender();
             assertThat(offender.getOtherIds().getCrn()).isEqualTo("X346204");
@@ -117,7 +115,7 @@ public class OffenderSearchRestClientIntTest {
             assertThat(match).isPresent();
             assertThat(match.get().getMatchedBy()).isEqualTo(OffenderSearchMatchType.NAME);
             assertThat(match.get().getMatches().size()).isEqualTo(1);
-            assertThat(match.get().isExactMatch()).isFalse();
+            assertThat(match.get().isExactOffenderMatch()).isFalse();
         }
 
         @Test

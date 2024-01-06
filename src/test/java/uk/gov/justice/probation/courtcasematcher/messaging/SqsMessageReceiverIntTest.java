@@ -7,6 +7,7 @@ import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder;
+import io.awspring.cloud.messaging.core.NotificationMessagingTemplate;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.cloud.aws.messaging.core.NotificationMessagingTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -44,11 +44,12 @@ import java.util.concurrent.TimeUnit;
 import static com.github.tomakehurst.wiremock.client.WireMock.absent;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.putRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -105,6 +106,8 @@ public class SqsMessageReceiverIntTest {
                         .withRequestBody(matchingJsonPath("caseId", equalTo("D517D32D-3C80-41E8-846E-D274DC2B94A5")))
                         .withRequestBody(matchingJsonPath("hearingId", equalTo("8bbb4fe3-a899-45c7-bdd4-4ee25ac5a83f")))
                         .withRequestBody(matchingJsonPath("hearingEventType", equalTo("Resulted")))
+                        .withRequestBody(matchingJsonPath("caseMarkers[0].markerTypeDescription", equalTo("description 1")))
+                        .withRequestBody(matchingJsonPath("caseMarkers[1].markerTypeDescription", equalTo("description 2")))
                         .withRequestBody(matchingJsonPath("urn", equalTo("25GD34377719")))
                         .withRequestBody(matchingJsonPath("caseNo", equalTo("D517D32D-3C80-41E8-846E-D274DC2B94A5")))
                         .withRequestBody(matchingJsonPath("hearingDays[0].courtCode", equalTo("B10JQ")))
@@ -125,8 +128,10 @@ public class SqsMessageReceiverIntTest {
                         .withRequestBody(matchingJsonPath("defendants[1].awaitingPsr", equalTo("false")))
                         .withRequestBody(matchingJsonPath("defendants[0].offences[0].listNo", equalTo("20")))
                         .withRequestBody(matchingJsonPath("defendants[0].offences[0].offenceCode", equalTo("ABC001")))
-                        .withRequestBody(matchingJsonPath("defendants[0].offences[0].plea.value", equalTo("value 1")))
-                        .withRequestBody(matchingJsonPath("defendants[0].offences[0].verdict.typeDescription", equalTo("description 1")))
+                        .withRequestBody(matchingJsonPath("defendants[0].offences[0].plea.pleaValue", equalTo("value 1")))
+                        .withRequestBody(matchingJsonPath("defendants[0].offences[0].plea.pleaDate", equalTo("2021-09-08")))
+                        .withRequestBody(matchingJsonPath("defendants[0].offences[0].verdict.verdictType.description", equalTo("description 1")))
+                        .withRequestBody(matchingJsonPath("defendants[0].offences[0].verdict.verdictDate", equalTo("2021-09-08")))
                         .withRequestBody(matchingJsonPath("defendants[1].offences[1].listNo", equalTo("30")))
                         .withRequestBody(matchingJsonPath("defendants[0].offences[1].offenceCode", equalTo("ABC002")))
                         .withRequestBody(matchingJsonPath("defendants[1].phoneNumber.home", absent()))
@@ -212,6 +217,42 @@ public class SqsMessageReceiverIntTest {
         verifyNoMoreInteractions(telemetryService);
     }
 
+    @Test
+    public void givenNewCase_whenExactPersonRecordFound_thenSetPersonIdOnDefendant() throws IOException {
+        featureFlags.setFlagValue("save_person_id_to_court_case_service", true);
+        var orgJson = Files.readString(Paths.get(BASE_PATH + "/common-platform/hearing-with-legal-entity-defendant.json"));
+
+        notificationMessagingTemplate.convertAndSend(TOPIC_NAME, orgJson, Map.of("messageType", "COMMON_PLATFORM_HEARING", "hearingEventType", "ConfirmedOrUpdated"));
+
+        await()
+                .atMost(10, TimeUnit.SECONDS)
+                .until(() -> countPutRequestsTo("/hearing/E10E3EF3-8637-40E3-BDED-8ED104A380AC") == 1);
+
+        MOCK_SERVER.verify(
+                putRequestedFor(urlMatching("/hearing/E10E3EF3-8637-40E3-BDED-8ED104A380AC"))
+                        .withRequestBody(matchingJsonPath("caseId", equalTo("D2B61C8A-0684-4764-B401-F0A788BC7CCF")))
+                        .withRequestBody(matchingJsonPath("hearingId", equalTo("E10E3EF3-8637-40E3-BDED-8ED104A380AC")))
+                        .withRequestBody(matchingJsonPath("caseNo", equalTo("D2B61C8A-0684-4764-B401-F0A788BC7CCF")))
+                        .withRequestBody(matchingJsonPath("hearingDays[0].courtRoom", equalTo("Crown Court 3-1")))
+                        .withRequestBody(matchingJsonPath("defendants[0].type", equalTo("PERSON")))
+                        .withRequestBody(matchingJsonPath("defendants[0].defendantId", equalTo("0ab7c3e5-eb4c-4e3f-b9e6-b9e78d3ea199")))
+                        .withRequestBody(matchingJsonPath("defendants[0].personId", equalTo("e374e376-e2a3-11ed-b5ea-0242ac120002")))
+
+                        .withRequestBody(matchingJsonPath("defendants[0].crn", equalTo("X346204")))
+                        .withRequestBody(matchingJsonPath("defendants[1].type", equalTo("ORGANISATION")))
+                        .withRequestBody(matchingJsonPath("defendants[1].defendantId", equalTo("903c4c54-f667-4770-8fdf-1adbb5957c25")))
+                        .withRequestBody(matchingJsonPath("defendants[1].personId", equalTo("e374e376-e2a3-11ed-b5ea-0242ac120002")))
+
+
+        );
+
+        verify(telemetryService).withOperation(nullable(String.class));
+        verify(telemetryService).trackHearingMessageReceivedEvent(any(String.class));
+        verify(telemetryService).trackNewHearingEvent(any(Hearing.class), any(String.class));
+        verify(telemetryService).trackOffenderMatchEvent(any(Defendant.class), any(Hearing.class), any(MatchResponse.class));
+        verifyNoMoreInteractions(telemetryService);
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     public void givenMatchedExistingCase_whenReceivePayload_thenSendUpdatedCase(boolean matchOnEveryRecordUpdate) throws IOException {
@@ -284,7 +325,7 @@ public class SqsMessageReceiverIntTest {
             notificationMessagingTemplate.convertAndSend(TOPIC_NAME, hearing, Map.of("messageType", "COMMON_PLATFORM_HEARING", "hearingEventType", "Resulted"));
 
             await()
-                    .atMost(10, TimeUnit.SECONDS)
+                    .atMost(15, TimeUnit.SECONDS)
                     .until(() -> countPutRequestsTo("/hearing/8bbb4fe3-a899-45c7-bdd4-4ee25ac5a83f") == 1);
 
             MOCK_SERVER.verify(
@@ -301,6 +342,11 @@ public class SqsMessageReceiverIntTest {
                             .withRequestBody(matchingJsonPath("defendants[1].probationStatus", equalTo("CURRENT")))
                             .withRequestBody(matchingJsonPath("defendants[1].breach", equalTo("true")))
                             .withRequestBody(matchingJsonPath("defendants[1].awaitingPsr", equalTo("true")))
+            );
+
+            MOCK_SERVER.verify(postRequestedFor(urlEqualTo("/person-match"))
+              .withRequestBody(matchingJsonPath("unique_id.0", equalTo("8e05e32f-8d2c-4782-bcdc-82983099f3fb")))
+              .withRequestBody(matchingJsonPath("unique_id.1", equalTo("8e05e32f-8d2c-4782-bcdc-82983099f3fb")))
             );
 
             verify(telemetryService).withOperation(nullable(String.class));

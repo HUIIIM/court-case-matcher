@@ -25,8 +25,14 @@ public class WebConfig {
     @Value("${offender-search.base-url}")
     private String offenderSearchBaseUrl;
 
+    @Value("${person-match-score.base-url}")
+    private String personMatchScoreBaseUrl;
+
     @Value("${nomis-oauth.base-url}")
     private String nomisOauthBaseUrl;
+
+    @Value("${person-record-service.base-url}")
+    private String personRecordServiceBaseUrl;
 
     @Value("${web.client.connect-timeout-ms}")
     private int connectTimeoutMs;
@@ -60,12 +66,31 @@ public class WebConfig {
     }
 
     @Bean
+    public WebClient personMatchScoreWebClient(OAuth2AuthorizedClientManager authorizedClientManager)
+    {
+        return defaultWebClientBuilder()
+                .baseUrl(this.personMatchScoreBaseUrl)
+                .build();
+    }
+
+    @Bean
     public WebClient oauthWebClient(OAuth2AuthorizedClientManager authorizedClientManager)
     {
         ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
                 new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
         return defaultWebClientBuilder()
                 .baseUrl(this.nomisOauthBaseUrl)
+                .filter(oauth2Client)
+                .build();
+    }
+
+    @Bean
+    public WebClient personRecordServiceWebClient(OAuth2AuthorizedClientManager authorizedClientManager)
+    {
+        ServletOAuth2AuthorizedClientExchangeFilterFunction oauth2Client =
+                new ServletOAuth2AuthorizedClientExchangeFilterFunction(authorizedClientManager);
+        return defaultWebClientBuilder()
+                .baseUrl(this.personRecordServiceBaseUrl)
                 .filter(oauth2Client)
                 .build();
     }

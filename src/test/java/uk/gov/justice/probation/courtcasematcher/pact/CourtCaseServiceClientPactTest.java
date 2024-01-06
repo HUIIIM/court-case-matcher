@@ -16,9 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import uk.gov.justice.probation.courtcasematcher.application.TestMessagingConfig;
 import uk.gov.justice.probation.courtcasematcher.model.domain.Defendant;
-import uk.gov.justice.probation.courtcasematcher.model.domain.Plea;
-import uk.gov.justice.probation.courtcasematcher.repository.CourtCaseRepository;
-import uk.gov.justice.probation.courtcasematcher.restclient.CourtCaseRestClient;
+import uk.gov.justice.probation.courtcasematcher.restclient.CourtCaseServiceClient;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,12 +33,12 @@ import static uk.gov.justice.probation.courtcasematcher.pact.DomainDataHelper.HE
 @ExtendWith({PactConsumerTestExt.class})
 @PactTestFor(providerName = "court-case-service", port = "8090")
 @PactDirectory(value = "build/pacts")
-class CourtCaseRestClientPactTest {
+class CourtCaseServiceClientPactTest {
 
     private static final String BASE_MOCK_PATH = "src/test/resources/mocks/__files/";
 
     @Autowired
-    private CourtCaseRestClient restClient;
+    private CourtCaseServiceClient restClient;
 
     @Pact(provider = "court-case-service", consumer = "court-case-matcher")
     public V4Pact getHearingByIdPact(PactDslWithProvider builder) throws IOException {
@@ -102,12 +100,14 @@ class CourtCaseRestClientPactTest {
                     offence.integerType("sequenceNumber");
                     offence.stringType("offenceCode");
                     offence.object("plea", (pleaObject -> {
-                        pleaObject.stringType("value");
-                        pleaObject.date("date");
+                        pleaObject.stringType("pleaValue");
+                        pleaObject.date("pleaDate");
                     }));
                     offence.object("verdict", (verdictObject -> {
-                        verdictObject.stringType("typeDescription");
-                        verdictObject.date("date");
+                        verdictObject.object("verdictType", (verdictTypeObject -> {
+                            verdictTypeObject.stringType("description");
+                        }));
+                        verdictObject.date("verdictDate");
                     }));
                     offence.array("judicialResults", (judicialResults) -> judicialResults.object((judicialResult) -> {
                         judicialResult.booleanType("isConvictedResult");
@@ -177,12 +177,14 @@ class CourtCaseRestClientPactTest {
                     offence.integerType("sequenceNumber");
                     offence.stringType("offenceCode");
                     offence.object("plea", (pleaObject -> {
-                        pleaObject.stringType("value");
-                        pleaObject.date("date");
+                        pleaObject.stringType("pleaValue");
+                        pleaObject.date("pleaDate");
                     }));
                     offence.object("verdict", (verdictObject -> {
-                        verdictObject.stringType("typeDescription");
-                        verdictObject.date("date");
+                        verdictObject.object("verdictType", (verdictTypeObject -> {
+                            verdictTypeObject.stringType("description");
+                        }));
+                        verdictObject.date("verdictDate");
                     }));
                     offence.array("judicialResults", (judicialResults) -> judicialResults.object((judicialResult) -> {
                         judicialResult.booleanType("isConvictedResult");
@@ -258,7 +260,7 @@ class CourtCaseRestClientPactTest {
     @Test
     void putHearingWithAllFields() {
 
-        final var actual = ((CourtCaseRepository) restClient)
+        final var actual = restClient
                 .putHearing(DomainDataHelper.aHearingWithAllFields()).blockOptional();
 
         assertThat(actual).isEmpty();

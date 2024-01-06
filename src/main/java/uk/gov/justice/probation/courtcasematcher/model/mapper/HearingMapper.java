@@ -3,6 +3,7 @@ package uk.gov.justice.probation.courtcasematcher.model.mapper;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 import uk.gov.justice.probation.courtcasematcher.messaging.model.libra.LibraAddress;
 import uk.gov.justice.probation.courtcasematcher.messaging.model.libra.LibraHearing;
 import uk.gov.justice.probation.courtcasematcher.messaging.model.libra.LibraName;
@@ -24,6 +25,7 @@ import uk.gov.justice.probation.courtcasematcher.model.type.MatchType;
 import uk.gov.justice.probation.courtcasematcher.restclient.model.offendersearch.Match;
 import uk.gov.justice.probation.courtcasematcher.restclient.model.offendersearch.MatchResponse;
 import uk.gov.justice.probation.courtcasematcher.restclient.model.offendersearch.OSOffender;
+import uk.gov.justice.probation.courtcasematcher.restclient.model.personrecordservice.Person;
 
 import java.util.Collections;
 import java.util.List;
@@ -105,7 +107,7 @@ public class HearingMapper {
 
                 // Fields to be updated from incoming
                 .withDefendants(mergeDefendants(incomingCase.getDefendants(), existingHearing.getDefendants(), incomingCase.getSource()))
-                .withCaseMarkers(existingHearing.getCaseMarkers());
+                .withCaseMarkers(incomingCase.getCaseMarkers());
 
     }
 
@@ -162,7 +164,7 @@ public class HearingMapper {
         var newDefendant = defendant
                 .withGroupedOffenderMatches(buildGroupedOffenderMatch(matchResponse.getMatches(), matchType));
 
-        if (matchResponse.isExactMatch()) {
+        if (matchResponse.isExactOffenderMatch()) {
             var offender = matchResponse.getMatches().get(0).getOffender();
             var probationStatus = offender.getProbationStatus();
             newDefendant = buildDefendant(offender, newDefendant, probationStatus);
@@ -185,8 +187,7 @@ public class HearingMapper {
                         .pnc(offender.getOtherIds().getPncNumber())
                         .cro(offender.getOtherIds().getCroNumber())
                         .build() : null
-                )
-                ;
+                );
     }
 
     public static GroupedOffenderMatches buildGroupedOffenderMatch(List<Match> matches, MatchType matchType) {
@@ -206,6 +207,7 @@ public class HearingMapper {
                 .rejected(false)
                 .confirmed(false)
                 .matchType(matchType)
+                .matchProbability(match.getMatchProbability())
                 .matchIdentifiers(MatchIdentifiers.builder()
                         .pnc(match.getOffender().getOtherIds().getPncNumber())
                         .cro(match.getOffender().getOtherIds().getCroNumber())

@@ -48,7 +48,7 @@ public class HearingProcessor {
             }
             matchAndSaveHearing(receivedHearing, messageId);
         } catch (Exception ex) {
-            log.error("Message processing failed. Error: {} ", ex.getMessage(), ex);
+            log.error("Message processing failed.", ex);
             telemetryService.trackProcessingFailureEvent(receivedHearing);
             throw new RuntimeException(ex.getMessage(), ex);
         }
@@ -94,7 +94,6 @@ public class HearingProcessor {
                 .onErrorReturn(hearing)
                 .doOnSuccess(courtCaseService::saveHearing)
                 .block();
-
     }
 
 

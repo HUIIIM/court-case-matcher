@@ -22,6 +22,18 @@ env:
         name: court-case-matcher-secrets
         key: nomis-oauth-client-id
 
+  - name: PERSON_RECORD_SEARCH_CLIENT_ID
+    valueFrom:
+      secretKeyRef:
+        name: court-case-matcher-secrets
+        key: nomis-oauth-client-id
+
+  - name: PERSON_RECORD_SEARCH_CLIENT_SECRET
+    valueFrom:
+      secretKeyRef:
+        name: court-case-matcher-secrets
+        key: nomis-oauth-client-secret
+
   - name: APPINSIGHTS_INSTRUMENTATIONKEY
     valueFrom:
       secretKeyRef:
@@ -34,18 +46,6 @@ env:
         name: court-case-matcher-secrets
         key: nomis-oauth-client-secret
 
-  - name: AWS_SQS_COURT_CASE_MATCHER_ACCESS_KEY_ID
-    valueFrom:
-      secretKeyRef:
-        name: court-case-matcher-queue-credentials
-        key: access_key_id
-
-  - name: AWS_SQS_COURT_CASE_MATCHER_SECRET_ACCESS_KEY
-    valueFrom:
-      secretKeyRef:
-        name: court-case-matcher-queue-credentials
-        key: secret_access_key
-
   - name: AWS_SQS_COURT_CASE_MATCHER_QUEUE_NAME
     valueFrom:
       secretKeyRef:
@@ -57,18 +57,6 @@ env:
       secretKeyRef:
         name: court-case-matcher-queue-credentials
         key: sqs_id
-
-  - name: AWS_SQS_COURT_CASE_MATCHER_DLQ_ACCESS_KEY_ID
-    valueFrom:
-      secretKeyRef:
-        name: court-case-matcher-queue-dead-letter-queue-credentials
-        key: access_key_id
-
-  - name: AWS_SQS_COURT_CASE_MATCHER_DLQ_SECRET_ACCESS_KEY
-    valueFrom:
-      secretKeyRef:
-        name: court-case-matcher-queue-dead-letter-queue-credentials
-        key: secret_access_key
 
   - name: AWS_SQS_COURT_CASE_MATCHER_DLQ_QUEUE_NAME
     valueFrom:

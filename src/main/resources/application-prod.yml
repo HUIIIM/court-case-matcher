@@ -8,10 +8,17 @@ court-case-service:
 nomis-oauth:
   base-url: https://sign-in.hmpps.service.justice.gov.uk
 
+person-match-score:
+  base-url: https://hmpps-person-match-score.hmpps.service.justice.gov.uk
+
+person-record-service:
+  base-url: https://hmpps-person-record.hmpps.service.justice.gov.uk
+
 feature:
   flags:
     use-offender-search-for-probation-status: true
     pass-hearing-id-to-court-case-service: true
     use-list-no-to-fetch-libra-case: true
     match-on-every-no-record-update: false
+    save_person_id_to_court_case_service: false
 

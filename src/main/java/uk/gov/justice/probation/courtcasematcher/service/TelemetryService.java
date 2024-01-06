@@ -31,6 +31,7 @@ public class TelemetryService {
     static final String SQS_MESSAGE_ID_KEY = "sqsMessageId";
     static final String URN_KEY = "urn";
     static final String HEARING_ID_KEY = "hearingId";
+    static final String PERSON_ID_KEY = "personId";
     static final String DEFENDANT_IDS_KEY = "defendantIds";
     static final String AWAITING_PSR_KEY = "awaitingPsr";
     static final String IN_BREACH_KEY = "inBreach";
@@ -77,7 +78,10 @@ public class TelemetryService {
             }));
 
         TelemetryEventType eventType = TelemetryEventType.OFFENDER_PARTIAL_MATCH;
-        if (matchResponse.isExactMatch()) {
+        if (matchResponse.isExactOffenderMatch()) {
+            ofNullable(defendant.getPersonId())
+                    .ifPresent(personId -> properties.put(PERSON_ID_KEY, personId));
+
             eventType = TelemetryEventType.OFFENDER_EXACT_MATCH;
         }
         else if (matchCount == 0){
@@ -193,5 +197,22 @@ public class TelemetryService {
         });
 
         return properties;
+    }
+
+    public void trackPersonRecordCreatedEvent(Defendant defendant, Hearing hearing) {
+        Map<String, String> properties = new HashMap<>(MAX_PROPERTY_COUNT);
+
+        ofNullable(hearing.getHearingId())
+                .ifPresent(hearingId -> properties.put(HEARING_ID_KEY, hearingId));
+        ofNullable(defendant.getPersonId())
+                .ifPresent(personId -> properties.put(PERSON_ID_KEY, personId));
+        ofNullable(defendant.getDefendantId())
+                .ifPresent(defendantId -> properties.put(DEFENDANT_ID_KEY, defendantId));
+        ofNullable(hearing.getCaseId())
+                .ifPresent(caseId -> properties.put(CASE_ID_KEY, caseId));
+        ofNullable(defendant.getPnc())
+                .ifPresent(pnc -> properties.put(PNC_KEY, pnc));
+
+        telemetryClient.trackEvent(TelemetryEventType.PERSON_RECORD_CREATED.eventName, properties, Collections.emptyMap());
     }
 }
